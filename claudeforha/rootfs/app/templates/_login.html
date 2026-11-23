@@ -1,0 +1,23 @@
+{# claude.ai login block, used by the Dashboard and the Claude tab. The logic is in app.js (initLogin). #}
+<section class="card" id="login-card" {{ 'hidden' if login_hidden }}>
+  <h2>{{ login_title | default(t('login.title')) }}</h2>
+  <ol class="steps">
+    <li>{{ t('login.step1_html') | safe }}</li>
+    <li>{{ t('login.step2') }}</li>
+    <li>{{ t('login.step3') }}</li>
+  </ol>
+  <div class="row"><button id="lg-start">{{ t('login.start') }}</button><button id="lg-cancel" class="secondary">{{ t('common.cancel') }}</button></div>
+  <div id="lg-box" hidden>
+    <p id="lg-state" class="hint"></p>
+    <div id="lg-link" class="row" hidden>
+      <a id="lg-open" class="btn" target="_blank" rel="noopener" href="#">{{ t('login.open_link') }}</a>
+      <button id="lg-copy" class="secondary" type="button">{{ t('login.copy_link') }}</button>
+      <span id="lg-copied" class="hint"></span>
+    </div>
+    <div id="lg-codebox" class="row" hidden>
+      <input id="lg-code" placeholder="{{ t('login.code_placeholder') }}" autocomplete="off">
+      <button id="lg-send">{{ t('login.send_code') }}</button>
+    </div>
+    <details><summary>{{ t('login.output') }}</summary><pre id="lg-out" class="log short"></pre></details>
+  </div>
+</section>

@@ -1,0 +1,51 @@
+name: Claude Code Remote (unofficial)
+version: "0.2.0"
+slug: claudeforha
+description: Talk to your Home Assistant from claude.ai/code or the Claude app, using Claude Code Remote Control
+url: https://github.com/urri34/ha-addons/tree/main/claudeforha
+# Pre-built images (without Claude Code, which is downloaded on first start).
+# Remove this line to build the image locally (local add-on in /addons).
+image: ghcr.io/urri34/{arch}-addon-claudeforha
+arch:
+  - amd64
+  - aarch64
+init: false
+# Web UI inside HA (sidebar and "Open web UI" button)
+ingress: true
+ingress_port: 34017
+panel_icon: mdi:robot-outline
+panel_title: Claude Code
+# The same web UI, reachable directly. Disabled by default: enable it in the Network tab if needed
+ports:
+  34017/tcp: null
+# Automatic SUPERVISOR_TOKEN: HA Core API and "ha" CLI without a manual token
+homeassistant_api: true
+hassio_api: true
+hassio_role: manager
+map:
+  # All of the add-on's configuration (password, Claude login, SSH keys, workspace).
+  # Lives in /addon_configs/<repo>_claudeforha: survives upgrades and rebuilds, included in backups.
+  - type: addon_config
+    read_only: false
+    path: /config
+  - type: homeassistant_config
+    read_only: false
+    path: /homeassistant
+  - type: all_addon_configs
+    read_only: false
+    path: /addon_configs
+  - type: addons
+    read_only: false
+    path: /addons
+  - type: share
+    read_only: false
+  - type: media
+    read_only: false
+  - type: backup
+    read_only: true
+  - type: ssl
+    read_only: true
+# No options here: everything is configured from the web UI
+# Claude Code downloaded at runtime (/data/claude-code, ~300 MB): not needed in backups, can be downloaded again
+backup_exclude:
+  - claude-code

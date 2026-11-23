@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>Remote Control</h1>
+  <p id="st-explain" class="explain"></p>
+  <div class="grid">
+    <div><span class="lbl">{{ t('common.status') }}</span> <b id="st-state">…</b></div>
+    <div><span class="lbl">{{ t('dash.account') }}</span> <b id="st-auth">…</b></div>
+    <div><span class="lbl">{{ t('dash.uptime') }}</span> <span id="st-uptime">–</span></div>
+    <div><span class="lbl">Claude Code</span> <span id="st-ver">–</span></div>
+  </div>
+  <div id="connected-notes" {{ 'hidden' if not auth_ok }}>
+  <p class="disclaimer">{{ t('dash.backup_note_html') | safe }}</p>
+  <p class="disclaimer">{{ t('dash.perm_note_html', url=url_for('claude_page') ~ '#rc') | safe }}</p>
+  </div>
+  <div class="row">
+    <button data-rc="start" disabled>{{ t('dash.start') }}</button>
+    <button data-rc="restart" disabled>{{ t('dash.restart') }}</button>
+    <button data-rc="stop" class="secondary" disabled>{{ t('dash.stop') }}</button>
+  </div>
+</section>
+
+{% with login_title = t('dash.step1'), login_hidden = auth_ok %}{% include "_login.html" %}{% endwith %}
+
+<section class="card" id="ssh-card" hidden>
+  <h2>{{ t('dash.ssh_title') }}</h2>
+  <p>{{ t('dash.ssh_text_html') | safe }}</p>
+  {% with ssh_next = 'index' %}{% include "_ssh_connect.html" %}{% endwith %}
+  <div class="row">
+    {% if not (ssh_addon and not ssh_addon.installed) %}
+    <form method="post" action="{{ url_for('settings_ssh_test') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="index">
+      <button class="secondary">{{ t('dash.ssh_test') }}</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{ url_for('ssh_dismiss') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="secondary">{{ t('dash.ssh_dismiss') }}</button>
+    </form>
+  </div>
+</section>
+
+<section class="card" id="out-card">
+  <details id="out-details">
+    <summary>{{ t('dash.output') }} <span id="out-count" class="hint"></span></summary>
+    <pre id="log" class="log"></pre>
+    <a id="log-full" class="btn secondary" href="{{ url_for('logs') }}" target="_blank">{{ t('dash.full_log') }}</a>
+  </details>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const SESSION = {{ settings.rc.session_name | tojson }};
+const STATES = {running: T["js.st_running"], stopped: T["js.st_stopped"], restarting: T["js.st_restarting"],
+                waiting_login: T["js.st_waiting_login"], waiting_install: T["js.st_waiting_install"]};
+function fmt(s) { if (s == null) return "–"; const h = Math.floor(s/3600), m = Math.floor(s%3600/60); return (h ? h + " h " : "") + m + " min"; }
+function explain(d) {
+  if (!d.cc.installed) return d.cc.state === "error" ? T["js.ex_install_error"] + " " + esc(d.cc.message || "") : T["js.ex_installing"];
+  if (!d.auth.ok) return T["js.ex_no_auth"];
+  if (d.rc.running) return T["js.ex_running"].replace("{session}", esc(SESSION));
+  if (d.rc.state === "restarting") return T["js.ex_restarting"].replace("{n}", d.rc.next_try_in);
+  return T["js.ex_stopped"];
+}
+function enable(name, on) { document.querySelector('[data-rc="' + name + '"]').disabled = !on; }
+async function refresh() {
+  let d;
+  try { d = await api("api/status?n=200"); } catch (e) { setText("st-state", T["js.error"] + ": " + e.message); return; }
+  const state = d.cc.installed ? d.rc.state : "waiting_install";
+  let st = STATES[state] || state;
+  if (state === "restarting" && d.rc.next_try_in != null) st += " (" + d.rc.next_try_in + " s)";
+  setText("st-state", st);
+  document.getElementById("st-state").className = d.rc.running ? "ok" : (d.auth.ok ? "" : "bad");
+  setText("st-auth", d.auth.ok ? T["js.connected"] : T["js.not_connected"]);
+  document.getElementById("st-auth").className = d.auth.ok ? "ok" : "bad";
+  setText("st-uptime", fmt(d.rc.uptime));
+  setText("st-ver", d.claude_version);
+  document.getElementById("st-explain").innerHTML = explain(d);
+  // Buttons: only the ones that make sense in the current state
+  enable("start", d.auth.ok && !d.rc.running);
+  enable("restart", d.auth.ok && d.rc.running);
+  enable("stop", d.rc.running || (d.auth.ok && d.rc.state === "restarting"));
+  // Backup and permission notes: only with the claude.ai account connected
+  document.getElementById("connected-notes").hidden = !d.auth.ok;
+  // Login: only when missing (and once Claude Code is installed)
+  const lc = document.getElementById("login-card");
+  if (d.auth.ok || !d.cc.installed) lc.hidden = true; else if (lc.hidden) lc.hidden = false;
+  // SSH: recommended once connected to claude.ai, until it works or is dismissed
+  document.getElementById("ssh-card").hidden = !(d.auth.ok && !d.ssh.verified && !d.ssh.dismissed);
+  // Output: collapsed; hidden entirely while there is none
+  document.getElementById("out-card").hidden = d.log.length === 0;
+  setText("out-count", d.log.length ? "(" + T["js.lines"].replace("{n}", d.log.length) + ")" : "");
+  const log = document.getElementById("log");
+  if (document.getElementById("out-details").open) {
+    const atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+    log.textContent = d.log.join("\n");
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  } else log.textContent = d.log.join("\n");
+}
+document.getElementById("out-details").addEventListener("toggle", e => { if (e.target.open) { const l = document.getElementById("log"); l.scrollTop = l.scrollHeight; } });
+document.querySelectorAll("[data-rc]").forEach(b => b.addEventListener("click", async () => {
+  if (b.dataset.rc === "stop" && !confirm(T["js.confirm_rc_stop"])) return;
+  document.querySelectorAll("[data-rc]").forEach(x => x.disabled = true);
+  try { await api("rc/" + b.dataset.rc, {}); } finally { setTimeout(refresh, 1500); }
+}));
+initLogin();
+refresh(); setInterval(refresh, 3000);
+</script>
+{% endblock %}

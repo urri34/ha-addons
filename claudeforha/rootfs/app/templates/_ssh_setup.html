@@ -1,0 +1,11 @@
+{# Steps to authorize the key in the SSH add-on: used by the Dashboard and the Home Assistant tab. #}
+<ol class="steps">
+  <li>{{ t('sshsetup.step1_html') | safe }}</li>
+  <li>{{ t('sshsetup.step2') }}</li>
+</ol>
+<pre class="log short" id="ssh-cmds">{{ ssh_cmds }}</pre>
+<div class="row">
+  <button type="button" class="secondary" onclick="copyText('ssh-cmds').then(ok => setText('ssh-copied', ok ? T['js.copied'] : T['js.copy_failed']))">{{ t('sshsetup.copy') }}</button>
+  <span id="ssh-copied" class="hint"></span>
+</div>
+<p class="hint">{{ t('sshsetup.hint_html') | safe }}</p>

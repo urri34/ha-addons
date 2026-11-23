@@ -1,0 +1,39 @@
+#!/usr/bin/expect -f
+# Runs "claude remote-control" in a pseudo-terminal and automatically answers "yes"
+# to the first-run questions:
+#   - "Enable Remote Control? (y/n)"
+#   - "Trust /config/workspace? [y/N]"
+#   - "Spawn mode for this project:" (only if --spawn was not passed)
+# Output goes to stdout, read by the web UI (Dashboard tab) and the add-on log.
+
+set timeout -1
+log_user 1
+match_max 100000
+
+# On stop -> send Ctrl+C to Claude so it exits cleanly
+trap {
+  send -- "\x03"
+  set timeout 15
+  expect eof
+  exit 0
+} {SIGTERM SIGINT}
+
+# Claude ignores answers that arrive too quickly
+# ("That answer arrived too quickly"), so wait a bit before answering.
+proc answer {text} {
+  sleep 2
+  send -- "$text\r"
+}
+
+spawn -noecho claude remote-control {*}$argv
+
+expect {
+  -re {Enable Remote Control\? *\(y/n\)} { answer "y"; exp_continue }
+  -re {Trust [^\r\n]*\? *\[y/N\]}         { answer "y"; exp_continue }
+  -re {Spawn mode for this project:}      { answer "1"; exp_continue }
+  full_buffer                             { exp_continue }
+  eof
+}
+
+catch wait result
+exit [lindex $result 3]

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>CLAUDE.md</h1>
+  <p class="hint">{{ t('claudemd.hint_html') | safe }}</p>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <textarea name="text" rows="28" spellcheck="false" class="mono">{{ text }}</textarea>
+    <div class="row"><button>{{ t('common.save') }}</button>
+      <button formaction="{{ url_for('claudemd_reset') }}" class="secondary"
+              onclick="return confirm(T['js.confirm_claudemd_reset'])">{{ t('claudemd.reset_btn') }}</button></div>
+  </form>
+</section>
+{% endblock %}

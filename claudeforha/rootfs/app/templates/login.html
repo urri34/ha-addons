@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ t('auth.login_title') }}</h1>
+  {% if first %}<p class="hint">{{ t('auth.first_html') | safe }}</p>{% endif %}
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ t('auth.password') }} <input type="password" name="password" autofocus autocomplete="current-password"></label>
+    <button type="submit">{{ t('auth.login_btn') }}</button>
+  </form>
+</section>
+{% endblock %}

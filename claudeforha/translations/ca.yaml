@@ -1,0 +1,2 @@
+network:
+  34017/tcp: Accés directe a la web de configuració (amb contrasenya pròpia). No cal si la fas servir des de la barra lateral de Home Assistant.

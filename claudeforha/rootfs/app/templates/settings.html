@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card" id="ha">
+  <h1>Home Assistant</h1>
+  <p>{{ t('common.status') }}: <b class="{{ 'ok' if ha_ok else 'bad' }}">{{ t('common.connected') if ha_ok else t('common.not_connected') }}</b></p>
+  <details {{ 'open' if not ha_ok }}>
+    <summary>{{ t('common.details_config') }}</summary>
+    <p class="hint">{{ ha_msg }}</p>
+    <p class="hint">{{ t('ha.hint') }}</p>
+    <p>{{ t('ha.in_use') }}: <code>{{ ha_url_eff or '—' }}</code> · token: <b>{{ ha_token_src }}</b></p>
+    <form method="post" action="{{ url_for('settings_ha') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ t('ha.url_html') | safe }}
+        <input name="url" value="{{ settings.ha.url }}" placeholder="http://homeassistant.local:8123"></label>
+      <label>{{ t('ha.token') }} {% if settings.ha.token %}{{ t('ha.token_saved') }}{% endif %}
+        <input name="token" type="password" autocomplete="off" placeholder="{{ '••••••••' if settings.ha.token else t('ha.token_placeholder') }}"></label>
+      {% if settings.ha.token %}<label class="check"><input type="checkbox" name="clear_token"> {{ t('ha.clear_token') }}</label>{% endif %}
+      <div class="row"><button>{{ t('common.save') }}</button>
+        <button formaction="{{ url_for('settings_ha_test') }}" class="secondary">{{ t('common.test') }}</button></div>
+    </form>
+  </details>
+</section>
+
+<section class="card" id="ssh">
+  <h2>{{ t('ssh.title') }}</h2>
+  <p>{{ t('common.status') }}: <b class="{{ 'ok' if ssh_ok else 'bad' }}">{{ t('common.connected') if ssh_ok else t('common.not_connected') }}</b></p>
+  <details {{ 'open' if not ssh_ok }}>
+    <summary>{{ t('common.details_config') }}</summary>
+    {% if not ssh_ok %}
+    <p class="hint">{{ t('ssh.optional') }}</p>
+    {% endif %}
+    <p class="hint">{{ t('ssh.last_test') }}: {{ ssh_msg }}</p>
+    {% if ssh_hostkey_changed %}
+    <p class="disclaimer">{{ t('ssh.hostkey_changed_html') | safe }}</p>
+    {% endif %}
+    {% if has_key and not ssh_ok and not ssh_hostkey_changed %}{% with ssh_next = '' %}{% include "_ssh_connect.html" %}{% endwith %}
+    {% elif ssh_ok and ssh_addon and ssh_addon.protected %}
+    <p class="disclaimer">{{ t('ssh.protection_html', url=ssh_addon_url) | safe }}</p>
+    {% endif %}
+    <div class="row">
+      <form method="post" action="{{ url_for('settings_ssh_test') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="secondary" {{ 'disabled' if not has_key }}>{{ t('common.test') }}</button>
+      </form>
+      {% if not settings.ssh.auto_hostkey %}
+      <form method="post" action="{{ url_for('settings_ssh_forget') }}"
+            onsubmit="return confirm(T['js.confirm_forget_hostkey'])">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="{{ '' if ssh_hostkey_changed else 'secondary' }}">{{ t('ssh.forget_btn') }}</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <details>
+      <summary>{{ t('ssh.advanced') }}</summary>
+      <form method="post" action="{{ url_for('settings_ssh') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="grid3">
+          <label>{{ t('ssh.host') }} <input name="host" value="{{ settings.ssh.host }}"></label>
+          <label>{{ t('ssh.port') }} <input name="port" value="{{ settings.ssh.port }}" inputmode="numeric"></label>
+          <label>{{ t('ssh.user') }} <input name="user" value="{{ settings.ssh.user }}"></label>
+        </div>
+        <label class="check"><input type="checkbox" name="auto_hostkey" {{ 'checked' if settings.ssh.auto_hostkey }}>
+          {{ t('ssh.auto_hostkey') }}</label>
+        <p class="hint">{{ t('ssh.auto_hostkey_hint_html') | safe }}</p>
+        <button>{{ t('common.save') }}</button>
+      </form>
+      <h3>{{ t('ssh.pubkey_title') }}</h3>
+      {% if pubkey %}
+        <pre class="log short copy" id="pubkey">{{ pubkey }}</pre>
+        <button class="secondary" onclick="copyText('pubkey')">{{ t('common.copy') }}</button>
+      {% else %}<p class="hint">{{ t('ssh.no_key') }}</p>{% endif %}
+      <div class="row">
+        <form method="post" action="{{ url_for('settings_ssh_generate') }}"
+              onsubmit="return {{ 'confirm(T[\'js.confirm_new_key\'])' if has_key else 'true' }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="secondary">{{ t('ssh.new_pair') if has_key else t('ssh.gen_pair') }}</button>
+        </form>
+      </div>
+      <details>
+        <summary>{{ t('ssh.import_title') }}</summary>
+        <form method="post" action="{{ url_for('settings_ssh_import') }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <label>{{ t('ssh.import_label') }}
+            <textarea name="private_key" rows="6" spellcheck="false" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea></label>
+          <button>{{ t('ssh.import_btn') }}</button>
+        </form>
+      </details>
+    </details>
+  </details>
+</section>
+
+<section class="card" id="env">
+  <h2>{{ t('env.title') }}</h2>
+  <p class="hint">{{ t('env.hint_html') | safe }}</p>
+  <form method="post" action="{{ url_for('settings_env') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <textarea name="env" rows="6" spellcheck="false">{{ env_text }}</textarea>
+    <button>{{ t('common.save') }}</button>
+  </form>
+</section>
+{% endblock %}

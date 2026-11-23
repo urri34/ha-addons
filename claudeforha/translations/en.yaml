@@ -1,0 +1,2 @@
+network:
+  34017/tcp: Direct access to the web UI (with its own password). Not needed when using it from the Home Assistant sidebar.

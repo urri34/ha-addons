@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card" id="lang">
+  <h1>{{ t('lang.title') }}</h1>
+  <form method="post" action="{{ url_for('settings_lang') }}" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <select name="lang" style="max-width: 280px; margin: 0">
+      <option value="" {{ 'selected' if not settings.lang }}>{{ t('lang.auto') }}</option>
+      {% for code, label in languages %}
+      <option value="{{ code }}" {{ 'selected' if settings.lang == code }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button>{{ t('common.save') }}</button>
+  </form>
+  <p class="hint">{{ t('lang.hint') }}</p>
+</section>
+
+<section class="card">
+  <h2>{{ t('backup.password_title') }}</h2>
+  <a class="btn" href="{{ url_for('password') }}">{{ t('backup.change_password') }}</a>
+</section>
+
+<section class="card">
+  <h2>{{ t('backup.download_title') }}</h2>
+  <p class="warn">{{ t('backup.download_warn') }}</p>
+  <a class="btn" href="{{ url_for('backup_download') }}">{{ t('backup.download_btn') }}</a>
+</section>
+
+<section class="card">
+  <h2>{{ t('backup.restore_title') }}</h2>
+  <details>
+    <summary>{{ t('common.show') }}</summary>
+    <p class="warn">{{ t('backup.restore_warn_html') | safe }}</p>
+    <form method="post" action="{{ url_for('backup_restore') }}" enctype="multipart/form-data"
+          onsubmit="return confirm(T['js.confirm_restore'])">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="file" name="file" accept=".gz,.tgz,application/gzip">
+      <button>{{ t('backup.restore_btn') }}</button>
+    </form>
+  </details>
+</section>
+
+<section class="card">
+  <h2>{{ t('backup.reset_title') }}</h2>
+  <details>
+    <summary>{{ t('common.show') }}</summary>
+    <p>{{ t('backup.reset_text_html') | safe }}</p>
+    <p class="warn">{{ t('backup.reset_warn') }}</p>
+    <form method="post" action="{{ url_for('factory_reset') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ t('backup.reset_confirm_html', word=reset_word) | safe }} <input name="confirm" autocomplete="off"></label>
+      <button>{{ t('backup.reset_title') }}</button>
+    </form>
+  </details>
+</section>
+{% endblock %}

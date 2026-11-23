@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Short call to the Home Assistant REST API.
+#   ha-api GET  /api/states/sun.sun
+#   ha-api POST /api/services/light/turn_on '{"entity_id":"light.living_room"}'
+set -euo pipefail
+method="${1:-}"; path="${2:-}"; data="${3:-}"
+if [ -z "$method" ] || [ -z "$path" ]; then
+  echo "Usage: ha-api GET|POST|DELETE /api/... ['json']" >&2
+  exit 2
+fi
+args=(-sS -X "$method" -H "Authorization: Bearer ${HA_TOKEN:?HA_TOKEN not set}" -H "Content-Type: application/json")
+[ -n "$data" ] && args+=(-d "$data")
+curl "${args[@]}" "${HA_URL:?HA_URL not set}${path}"
+echo

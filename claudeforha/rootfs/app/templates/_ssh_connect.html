@@ -1,0 +1,27 @@
+{# How to connect SSH depending on the state of the Advanced SSH & Web Terminal add-on.
+   Variables: ssh_addon (None if unknown), ssh_addon_url, ssh_next ('index' or empty). #}
+{% if ssh_addon and not ssh_addon.installed %}
+  {% if ssh_addon.core_ssh %}
+  <p>{{ t('sshc.core_only_html') | safe }}</p>
+  {% else %}
+  <p>{{ t('sshc.missing_html') | safe }}</p>
+  {% endif %}
+  <div class="row"><a class="btn" href="{{ ssh_addon_url }}" target="_blank" rel="noopener">{{ t('sshc.install_btn') }}</a></div>
+  <p class="hint">{{ t('sshc.install_hint') }}</p>
+{% elif ssh_addon %}
+  <p>{{ (t('sshc.auto_restart_html') if ssh_addon.state == 'started' else t('sshc.auto_start_html')) | safe }}</p>
+  <form method="post" action="{{ url_for('ssh_connect') }}"
+        onsubmit="{% if ssh_addon.state == 'started' %}if (!confirm(T['js.confirm_ssh_restart'])) return false; {% endif %}const b = this.querySelector('button'); b.disabled = true; b.textContent = T['js.ssh_connecting']; return true;">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="{{ ssh_next }}">
+    <div class="row"><button>{{ t('sshc.connect_btn') }}</button></div>
+  </form>
+  <details>
+    <summary>{{ t('sshc.manual') }}</summary>
+    {% include "_ssh_setup.html" %}
+  </details>
+{% else %}
+  {% include "_ssh_setup.html" %}
+{% endif %}
+{% if ssh_addon and ssh_addon.installed and ssh_addon.protected %}
+  <p class="disclaimer">{{ t('ssh.protection_html', url=ssh_addon_url) | safe }}</p>
+{% endif %}

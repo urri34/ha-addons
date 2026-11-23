@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>{{ t('claude.session_title') }}</h1>
+  <p>{{ t('common.status') }}: <b class="{{ 'ok' if auth_ok else 'bad' }}">{{ t('common.connected') if auth_ok else t('common.not_connected') }}</b></p>
+  <details {{ 'open' if not auth_ok }}>
+    <summary>{{ t('common.details') }}</summary>
+    <pre class="log short">{{ auth_text }}</pre>
+    <p class="hint">{{ t('claude.session_hint') }}</p>
+    {% if auth_ok %}
+    <form method="post" action="{{ url_for('claude_logout') }}" onsubmit="return confirm(T['js.confirm_claude_logout'])">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="secondary">{{ t('claude.logout_btn') }}</button>
+    </form>
+    {% endif %}
+  </details>
+</section>
+{% if not cc_installed %}
+<section class="card"><p class="disclaimer">{{ t('cc.not_installed', state=cc_state_text) }}</p></section>
+{% elif not auth_ok %}{% with login_title = t('login.title'), login_hidden = false %}{% include "_login.html" %}{% endwith %}{% endif %}
+
+<section class="card" id="rc">
+  <h2>Remote Control</h2>
+  {% set pm_names = {'': t('pm.default_short'), 'default': t('pm.default_short'), 'acceptEdits': 'acceptEdits', 'plan': 'plan', 'bypassPermissions': t('pm.bypass_short')} %}
+  <p>{{ t('rc.session') }} <b>{{ settings.rc.session_name }}</b> · {{ t('rc.permissions') }}: <b>{{ pm_names.get(settings.rc.permission_mode, settings.rc.permission_mode) }}</b></p>
+  <details id="rc-details">
+  <summary>{{ t('rc.config') }}</summary>
+  <p class="hint">{{ t('rc.config_hint') }}</p>
+  <form method="post" action="{{ url_for('settings_rc') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ t('rc.session_name') }}
+      <input name="session_name" value="{{ settings.rc.session_name }}"></label>
+    <label>{{ t('rc.spawn_mode') }}
+      <select name="spawn_mode">
+        {% for v, t_ in [('same-dir', t('rc.spawn_same_dir')), ('session', t('rc.spawn_session')), ('worktree', t('rc.spawn_worktree'))] %}
+        <option value="{{ v }}" {{ 'selected' if settings.rc.spawn_mode == v }}>{{ t_ }}</option>
+        {% endfor %}
+      </select></label>
+    <label>{{ t('rc.permission_mode') }}
+      <select name="permission_mode">
+        {% for v, t_ in [('', t('pm.default')), ('acceptEdits', t('pm.accept_edits')), ('plan', t('pm.plan')), ('bypassPermissions', t('pm.bypass'))] %}
+        <option value="{{ v }}" {{ 'selected' if settings.rc.permission_mode == v }}>{{ t_ }}</option>
+        {% endfor %}
+      </select></label>
+    <label>{{ t('rc.capacity') }}
+      <input name="capacity" value="{{ settings.rc.capacity }}" inputmode="numeric"></label>
+    <label class="check"><input type="checkbox" name="autostart" {{ 'checked' if settings.rc.autostart }}> {{ t('rc.autostart') }}</label>
+    <label class="check"><input type="checkbox" name="verbose" {{ 'checked' if settings.rc.verbose }}> {{ t('rc.verbose') }}</label>
+    <button>{{ t('common.save') }}</button>
+  </form>
+  </details>
+</section>
+
+<section class="card" id="cc">
+  <h2>Claude Code</h2>
+  <p>{{ t('cc.version') }} <b>{{ cv }}</b>
+    <span class="hint">({{ t('cc.from_image') if cc_image and not cc_updated else t('cc.downloaded') }})</span></p>
+  <details>
+    <summary>{{ t('cc.update') }}</summary>
+    <p class="hint">{{ t('cc.update_hint') }}</p>
+    <div class="row">
+      <form method="post" action="{{ url_for('claude_update') }}"
+            onsubmit="if (!confirm(T['js.confirm_cc_update'])) return false; const b = this.querySelector('button'); b.disabled = true; b.textContent = T['js.cc_updating']; return true;">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button {{ 'disabled' if not cc_installed }}>{{ t('cc.update_btn') }}</button>
+      </form>
+      {% if cc_updated and cc_image %}
+      <form method="post" action="{{ url_for('claude_update_undo') }}"
+            onsubmit="return confirm(T['js.confirm_cc_undo'])">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="secondary">{{ t('cc.undo_btn', v=cc_image) }}</button>
+      </form>
+      {% endif %}
+    </div>
+  </details>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>
+initLogin();
+// The Dashboard link and "Save" go to #rc: open the details block then
+if (location.hash === "#rc") document.getElementById("rc-details").open = true;
+</script>
+{% endblock %}
